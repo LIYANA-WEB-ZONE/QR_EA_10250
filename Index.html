@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart QR Attendance System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --background: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Noto Sans Sinhala', sans-serif; }
+
+        body {
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 440px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            position: relative;
+        }
+
+        .header { margin-bottom: 25px; }
+
+        .logo-area {
+            width: 60px;
+            height: 60px;
+            background: rgba(79, 70, 229, 0.2);
+            border: 2px solid var(--primary);
+            color: #818cf8;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px auto;
+            font-size: 24px;
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.3);
+            animation: pulse 2s infinite alternate;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .subtitle { color: var(--text-muted); font-size: 13px; }
+
+        /* Scanner Frame */
+        .scanner-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #020617;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 25px;
+        }
+
+        #reader { width: 100% !important; height: 100% !important; border: none !important; }
+        #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+        
+        /* අවසර ඉල්ලන කැත බටන් සහ අනවශ්‍ය ටෙක්ස්ට් සියල්ලම මින් ඉවත් කෙරේ */
+        #reader img, #reader button, #reader__dashboard_link, #reader span { display: none !important; }
+
+        /* Tech Laser Line */
+        .scan-laser {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(to right, transparent, #06b6d4, #4f46e5, #06b6d4, transparent);
+            box-shadow: 0 0 15px #06b6d4, 0 0 8px #4f46e5;
+            animation: scanning 2.5s linear infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* Scanner Corner Borders */
+        .corner { position: absolute; width: 20px; height: 20px; border: 3.5px solid #06b6d4; z-index: 11; pointer-events: none; }
+        .top-left { top: 15px; left: 15px; border-right: none; border-bottom: none; border-top-left-radius: 6px; }
+        .top-right { top: 15px; right: 15px; border-left: none; border-bottom: none; border-top-right-radius: 6px; }
+        .bottom-left { bottom: 15px; left: 15px; border-right: none; border-top: none; border-bottom-left-radius: 6px; }
+        .bottom-right { bottom: 15px; right: 15px; border-left: none; border-top: none; border-bottom-right-radius: 6px; }
+
+        /* Status Animations Screen */
+        #status-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 20;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .status-icon { font-size: 52px; margin-bottom: 12px; }
+        .status-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+        .status-msg { color: var(--text-muted); font-size: 13px; }
+        .status-loading .status-icon { color: var(--primary); }
+        .status-success .status-icon { color: var(--success); }
+        .status-error .status-icon { color: var(--error); }
+
+        .footer-note { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .footer-note i { color: var(--success); }
+
+        @keyframes scanning { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+        @keyframes pulse { 0% { box-shadow: 0 0 10px rgba(79, 70, 229, 0.2); } 100% { box-shadow: 0 0 20px rgba(79, 70, 229, 0.5); } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <div class="logo-area">
+            <i class="fa-solid fa-qrcode"></i>
+        </div>
+        <h1>QR පැමිණීමේ පද්ධතිය</h1>
+        <div class="subtitle">ඔබේ QR කේතය ස්කෑනරයට පෙන්වන්න</div>
+    </div>
+
+    <div class="scanner-wrapper">
+        <div class="scan-laser"></div>
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+
+        <div id="reader"></div>
+
+        <div id="status-overlay">
+            <div id="overlay-icon" class="status-icon"></div>
+            <div id="overlay-title" class="status-title"></div>
+            <div id="overlay-msg" class="status-msg"></div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Google Sheets සමඟ සජීවීව සම්බන්ධයි</span>
+    </div>
+</div>
+
+<script>
+    // ⚠️ ඔබේ Google Web App URL එක සාර්ථකව සම්බන්ධ කර ඇත
+    const googleWebAppUrl = "https://script.google.com/macros/s/AKfycbzgET5jskMo_vyteyoGAniyLMDa6ZKjk0MAvgmWC9LuLlutvqlWWw7yq3SCUhewGUdI1w/exec";
+    
+    let html5Qrcode;
+
+    function showOverlay(type, title, message) {
+        const overlay = document.getElementById('status-overlay');
+        const iconDiv = document.getElementById('overlay-icon');
+        const titleDiv = document.getElementById('overlay-title');
+        const msgDiv = document.getElementById('overlay-msg');
+        overlay.className = 'status-' + type;
+        
+        if(type === 'loading') {
+            iconDiv.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+        } else if(type === 'success') {
+            iconDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        } else {
+            iconDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+        }
+        titleDiv.innerText = title;
+        msgDiv.innerText = message;
+        overlay.style.display = 'flex';
+    }
+
+    function hideOverlay() { document.getElementById('status-overlay').style.display = 'none'; }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // ස්කෑනරය තාවකාලිකව නවත්වන්න
+        html5Qrcode.stop().then(() => {
+            showOverlay('loading', 'දත්ත ඇතුළත් කරමින්...', 'කරුණාකර මොහොතක් රැඳී සිටින්න');
+
+            fetch(googleWebAppUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                cache: 'no-cache',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qrData: decodedText })
+            })
+            .then(() => {
+                showOverlay('success', '✅ ස්කෑන් කිරීම සාර්ථකයි', 'ඔබේ දත්ත Google Sheet එකට ඇතුළත් විය.');
+                setTimeout(() => {
+                    hideOverlay();
+                    startCameraDirectly(); // නැවත කැමරාව ඔන් කරන්න
+                }, 3000);
+            })
+            .catch(error => {
+                showOverlay('error', '❌ ගැටළුවක් පවතී', 'නැවත උත්සාහ කරන්න: ' + error);
+                setTimeout(() => { hideOverlay(); startCameraDirectly(); }, 4000);
+            });
+        }).catch(err => {
+            console.error("Failed to stop scanner.", err);
+        });
+    }
+
+    // වෙබ් පිටුව විවෘත වූ සැනින් පසුපස කැමරාව කෙලින්ම ඔන් කරන ශ්‍රිතය
+    function startCameraDirectly() {
+        if (!html5Qrcode) {
+            html5Qrcode = new Html5Qrcode("reader");
+        }
+        
+        const config = { 
+            fps: 20, 
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                return { width: viewfinderWidth * 0.75, height: viewfinderHeight * 0.75 };
+            },
+            aspectRatio: 1.0
+        };
+
+        // facingMode: "environment" මඟින් ෆෝන් එකේ බැක් කැමරාව කෙලින්ම ඔන් කරයි
+        html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccess)
+        .catch(err => {
+            console.log("Camera access error, retrying...", err);
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', startCameraDirectly);
+</script>
+
+</body>
+</html>
